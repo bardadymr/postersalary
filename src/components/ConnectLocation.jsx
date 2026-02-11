@@ -32,6 +32,9 @@ const ConnectLocation = ({ onLocationConnected }) => {
 
         // 3. Слухаємо повідомлення від callback сторінки
         const messageHandler = async (event) => {
+
+          console.log("Incoming message from origin:", event.origin);
+  console.log("Message data:", event.data);
           // Перевіряємо origin для безпеки (дозволяємо Netlify та localhost)
           const allowedOrigins = [
             'https://postersalary.netlify.app',
@@ -39,10 +42,10 @@ const ConnectLocation = ({ onLocationConnected }) => {
             window.location.origin
           ];
           
-          if (!allowedOrigins.includes(event.origin)) {
+          /*if (!allowedOrigins.includes(event.origin)) {
             console.warn('Message from unauthorized origin:', event.origin);
             return;
-          }
+          }*/
 
           if (event.data.type === 'POSTER_AUTH_SUCCESS') {
             window.removeEventListener('message', messageHandler);
