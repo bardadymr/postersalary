@@ -1,6 +1,6 @@
 // frontend/src/components/ConnectLocation.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const ConnectLocation = ({ onLocationConnected }) => {
@@ -10,11 +10,92 @@ const ConnectLocation = ({ onLocationConnected }) => {
 
   const API_URL = import.meta.env.VITE_API_URL || 'https://proper-donkey-nice.ngrok-free.app/api';
 
+  // Слушаем изменения в localStorage
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      console.log('Storage event:', e);
+      
+      if (e.key === 'poster_auth_result' && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          console.log('Auth result from storage:', data);
+          
+          // Очищаем данные из localStorage сразу
+          localStorage.removeItem('poster_auth_result');
+          
+          if (data.type === 'POSTER_AUTH_SUCCESS') {
+            handleAuthSuccess(data);
+          } else if (data.type === 'POSTER_AUTH_ERROR') {
+            handleAuthError(data.error);
+          }
+        } catch (err) {
+          console.error('Error parsing storage data:', err);
+        }
+      }
+    };
+
+    // Также проверяем localStorage при монтировании компонента
+    const checkLocalStorage = () => {
+      const stored = localStorage.getItem('poster_auth_result');
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          console.log('Found auth result in storage:', data);
+          
+          // Проверяем, что данные свежие (не старше 5 минут)
+          const age = Date.now() - data.timestamp;
+          if (age < 5 * 60 * 1000) {
+            localStorage.removeItem('poster_auth_result');
+            
+            if (data.type === 'POSTER_AUTH_SUCCESS') {
+              handleAuthSuccess(data);
+            } else if (data.type === 'POSTER_AUTH_ERROR') {
+              handleAuthError(data.error);
+            }
+          } else {
+            // Удаляем старые данные
+            localStorage.removeItem('poster_auth_result');
+          }
+        } catch (err) {
+          console.error('Error parsing stored data:', err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Проверяем каждые 500ms если мы в режиме connecting
+    let interval;
+    if (step === 'connecting') {
+      interval = setInterval(checkLocalStorage, 500);
+    }
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      if (interval) clearInterval(interval);
+    };
+  }, [step]);
+
+  const handleAuthSuccess = async (data) => {
+    console.log('Handling auth success:', data);
+    await saveLocationData(data);
+  };
+
+  const handleAuthError = (errorMsg) => {
+    console.log('Handling auth error:', errorMsg);
+    setError(errorMsg || 'Помилка авторизації');
+    setLoading(false);
+    setStep('initial');
+  };
+
   const handleConnectPoster = async () => {
     setLoading(true);
     setError(null);
 
     try {
+      // Очищаем старые данные из localStorage
+      localStorage.removeItem('poster_auth_result');
+
       // 1. Отримуємо URL для авторизації в Poster
       const response = await axios.get(`${API_URL}/auth/poster`, {
         headers: {
@@ -25,34 +106,36 @@ const ConnectLocation = ({ onLocationConnected }) => {
       if (response.data.success && response.data.authUrl) {
         setStep('connecting');
         
-        // 2. Встановлюємо обробник ПЕРЕД відкриттям вікна
+        // 2. Встановлюємо обробник postMessage як запасной вариант
         let authWindow = null;
         
         const messageHandler = async (event) => {
-          console.log("Received message:", event);
-          console.log("Event origin:", event.origin);
-          console.log("Event data:", event.data);
+          console.log("Received postMessage:", event.data);
           
-          // Перевіряємо тип повідомлення (не origin, бо може бути з backend домену)
-          if (!event.data || !event.data.type) {
-            console.log("Invalid message format");
+          // Фильтруем лишние сообщения
+          if (!event.data || typeof event.data !== 'object') {
+            return;
+          }
+          
+          // Игнорируем сообщения от расширений браузера
+          if (event.data.target === 'metamask-inpage' || 
+              event.data.target === 'metamask-contentscript' ||
+              typeof event.data === 'string') {
             return;
           }
 
           if (event.data.type === 'POSTER_AUTH_SUCCESS') {
-            console.log("Auth success received");
+            console.log("Auth success via postMessage");
             window.removeEventListener('message', messageHandler);
             
-            // Закриваємо вікно авторизації
             if (authWindow && !authWindow.closed) {
               authWindow.close();
             }
 
-            // Зберігаємо дані закладу
             await saveLocationData(event.data);
             
           } else if (event.data.type === 'POSTER_AUTH_ERROR') {
-            console.log("Auth error received");
+            console.log("Auth error via postMessage");
             window.removeEventListener('message', messageHandler);
             
             if (authWindow && !authWindow.closed) {
@@ -65,7 +148,6 @@ const ConnectLocation = ({ onLocationConnected }) => {
           }
         };
 
-        // Додаємо обробник
         window.addEventListener('message', messageHandler);
         console.log("Message handler added");
 
@@ -89,11 +171,14 @@ const ConnectLocation = ({ onLocationConnected }) => {
             clearInterval(checkClosed);
             window.removeEventListener('message', messageHandler);
             
-            if (step === 'connecting') {
-              setError('Авторизація скасована');
-              setLoading(false);
-              setStep('initial');
-            }
+            // Даем время на обработку данных из localStorage
+            setTimeout(() => {
+              if (step === 'connecting') {
+                setError('Авторизація скасована');
+                setLoading(false);
+                setStep('initial');
+              }
+            }, 1000);
           }
         }, 1000);
 
