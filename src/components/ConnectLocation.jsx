@@ -27,7 +27,7 @@ const ConnectLocation = ({ onLocationConnected }) => {
         const authWindow = window.open(
           response.data.authUrl,
           'PosterAuth',
-          'width=600,height=700,location=no,menubar=no'
+          'width=600,height=700,location=no,menubar=no,rel=opener'
         );
 
         // 3. Слухаємо повідомлення від callback сторінки
@@ -42,10 +42,10 @@ const ConnectLocation = ({ onLocationConnected }) => {
             window.location.origin
           ];
           
-          /*if (!allowedOrigins.includes(event.origin)) {
+          if (!allowedOrigins.includes(event.origin)) {
             console.warn('Message from unauthorized origin:', event.origin);
             return;
-          }*/
+          }
 
           if (event.data.type === 'POSTER_AUTH_SUCCESS') {
             window.removeEventListener('message', messageHandler);
