@@ -16,7 +16,11 @@ const ConnectLocation = ({ onLocationConnected }) => {
 
     try {
       // 1. Отримуємо URL для авторизації в Poster
-      const response = await axios.get(`${API_URL}/auth/poster`);
+      const response = await axios.get(`${API_URL}/auth/poster`, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true' // Можно любое значение, например '69420'
+      }
+    });
       
       if (response.data.success && response.data.authUrl) {
         // 2. Відкриваємо Poster авторизацію в новому вікні
