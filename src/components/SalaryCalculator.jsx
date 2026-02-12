@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const SalaryCalculator = () => {
+const SalaryCalculator = ({ refreshKey }) => {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingLocations, setLoadingLocations] = useState(true);
   const [results, setResults] = useState(null);
+  const [error, setError] = useState(null);
   
   const [formData, setFormData] = useState({
     locationId: '',
@@ -18,7 +20,9 @@ const SalaryCalculator = () => {
     revenuePercent: 3
   });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  const API_URL = import.meta.env.VITE_API_URL || 'https://proper-donkey-nice.ngrok-free.app/api';
+
+  console.log('API_URL:', API_URL);
 
   // Ініціалізація Telegram WebApp
   useEffect(() => {
@@ -36,20 +40,43 @@ const SalaryCalculator = () => {
   // Завантаження списку закладів
   useEffect(() => {
     fetchLocations();
-  }, []);
+  }, [refreshKey]); // Оновлюємо при зміні refreshKey
 
   const fetchLocations = async () => {
+    setLoadingLocations(true);
+    setError(null);
+    
     try {
-      const response = await axios.get(`${API_URL}/locations`);
-      setLocations(response.data.locations || []);
+      console.log('Fetching locations from:', `${API_URL}/locations`);
+      
+      const response = await axios.get(`${API_URL}/locations`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
+      
+      console.log('Locations response:', response.data);
+      
+      if (response.data && response.data.locations) {
+        setLocations(response.data.locations);
+        console.log('Loaded locations:', response.data.locations);
+      } else {
+        setLocations([]);
+        console.warn('No locations in response');
+      }
     } catch (error) {
       console.error('Error fetching locations:', error);
-      showNotification('Помилка завантаження закладів', 'error');
+      setError('Помилка завантаження закладів: ' + (error.response?.data?.error || error.message));
+      setLocations([]);
+    } finally {
+      setLoadingLocations(false);
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    console.log('Input change:', name, value);
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -57,6 +84,9 @@ const SalaryCalculator = () => {
   };
 
   const handleCalculate = async () => {
+    console.log('Calculate button clicked');
+    console.log('Form data:', formData);
+    
     // Валідація
     if (!formData.locationId) {
       showNotification('Оберіть заклад', 'error');
@@ -70,9 +100,20 @@ const SalaryCalculator = () => {
 
     setLoading(true);
     setResults(null);
+    setError(null);
 
     try {
-      const response = await axios.post(`${API_URL}/salary/calculate`, formData);
+      console.log('Sending calculation request to:', `${API_URL}/salary/calculate`);
+      console.log('Request data:', formData);
+      
+      const response = await axios.post(`${API_URL}/salary/calculate`, formData, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Calculation response:', response.data);
       
       if (response.data.success) {
         setResults(response.data);
@@ -83,14 +124,17 @@ const SalaryCalculator = () => {
           window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
         }
       } else {
-        showNotification(response.data.error || 'Помилка розрахунку', 'error');
+        const errorMsg = response.data.error || 'Помилка розрахунку';
+        setError(errorMsg);
+        showNotification(errorMsg, 'error');
       }
     } catch (error) {
       console.error('Calculation error:', error);
-      showNotification(
-        error.response?.data?.error || 'Помилка з\'єднання з сервером',
-        'error'
-      );
+      console.error('Error response:', error.response?.data);
+      
+      const errorMsg = error.response?.data?.error || error.message || 'Помилка з\'єднання з сервером';
+      setError(errorMsg);
+      showNotification(errorMsg, 'error');
       
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
@@ -101,6 +145,8 @@ const SalaryCalculator = () => {
   };
 
   const showNotification = (message, type = 'info') => {
+    console.log('Notification:', type, message);
+    
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.showAlert(message);
     } else {
@@ -109,7 +155,6 @@ const SalaryCalculator = () => {
   };
 
   const exportToCSV = async () => {
-    // TODO: Implement CSV export
     showNotification('Експорт буде доступний найближчим часом');
   };
 
@@ -132,7 +177,31 @@ const SalaryCalculator = () => {
           <p className="text-gray-600 text-sm">
             Автоматичний розрахунок на основі даних Poster
           </p>
+          
+          {/* Debug info */}
+          <div className="mt-2 text-xs text-gray-400">
+            Закладів: {locations.length} | API: {API_URL.split('/').pop()}
+          </div>
         </div>
+
+        {/* Error display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-start">
+              <span className="text-red-600 text-lg mr-2">⚠️</span>
+              <div className="flex-1">
+                <p className="text-red-800 font-medium">Помилка</p>
+                <p className="text-red-600 text-sm mt-1">{error}</p>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-400 hover:text-red-600"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-4">
@@ -142,19 +211,29 @@ const SalaryCalculator = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 🏪 Заклад
               </label>
-              <select
-                name="locationId"
-                value={formData.locationId}
-                onChange={handleInputChange}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Оберіть заклад...</option>
-                {locations.map(loc => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
+              {loadingLocations ? (
+                <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                  Завантаження закладів...
+                </div>
+              ) : locations.length === 0 ? (
+                <div className="w-full p-3 border border-yellow-300 rounded-lg bg-yellow-50 text-yellow-700">
+                  ⚠️ Немає підключених закладів. Перейдіть на вкладку "🔗 Підключити"
+                </div>
+              ) : (
+                <select
+                  name="locationId"
+                  value={formData.locationId}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Оберіть заклад...</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Період розрахунку */}
@@ -167,7 +246,7 @@ const SalaryCalculator = () => {
                   name="month"
                   value={formData.month}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   {months.map((month, index) => (
                     <option key={index + 1} value={index + 1}>
@@ -184,7 +263,7 @@ const SalaryCalculator = () => {
                   name="year"
                   value={formData.year}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   {years.map(year => (
                     <option key={year} value={year}>
@@ -205,7 +284,7 @@ const SalaryCalculator = () => {
                   name="inventoryMonth"
                   value={formData.inventoryMonth}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   {months.map((month, index) => (
                     <option key={index + 1} value={index + 1}>
@@ -222,7 +301,7 @@ const SalaryCalculator = () => {
                   name="inventoryYear"
                   value={formData.inventoryYear}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   {years.map(year => (
                     <option key={year} value={year}>
@@ -245,7 +324,7 @@ const SalaryCalculator = () => {
                 onChange={handleInputChange}
                 min="0"
                 step="50"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 placeholder="500"
               />
             </div>
@@ -263,7 +342,7 @@ const SalaryCalculator = () => {
                 min="0"
                 max="100"
                 step="0.5"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 placeholder="3"
               />
             </div>
@@ -271,9 +350,9 @@ const SalaryCalculator = () => {
             {/* Кнопка розрахунку */}
             <button
               onClick={handleCalculate}
-              disabled={loading}
+              disabled={loading || locations.length === 0}
               className={`w-full py-4 rounded-lg font-semibold text-white transition-all ${
-                loading
+                loading || locations.length === 0
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
               }`}
@@ -298,9 +377,20 @@ const SalaryCalculator = () => {
                   </svg>
                   Розраховуємо...
                 </span>
+              ) : locations.length === 0 ? (
+                '🔗 Спочатку підключіть заклад'
               ) : (
                 '🧮 Розрахувати зарплату'
               )}
+            </button>
+
+            {/* Reload locations button */}
+            <button
+              onClick={fetchLocations}
+              disabled={loadingLocations}
+              className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 disabled:text-gray-400"
+            >
+              {loadingLocations ? '⏳ Завантаження...' : '🔄 Оновити список закладів'}
             </button>
           </div>
         </div>
@@ -343,7 +433,7 @@ const SalaryCalculator = () => {
             </div>
 
             {/* Inventory */}
-            {results.inventory.totalLoss !== 0 && (
+            {results.inventory && results.inventory.totalLoss !== 0 && (
               <div className={`p-4 rounded-lg mb-4 ${
                 results.inventory.totalLoss < 0 ? 'bg-red-50' : 'bg-green-50'
               }`}>
@@ -358,32 +448,38 @@ const SalaryCalculator = () => {
             )}
 
             {/* Employees Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-100 border-b">
-                    <th className="p-3 text-left">Співробітник</th>
-                    <th className="p-3 text-center">Зміни</th>
-                    <th className="p-3 text-right">Виручка</th>
-                    <th className="p-3 text-right">ЗП</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.employees.map((emp, index) => (
-                    <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-medium">{emp.employeeName}</td>
-                      <td className="p-3 text-center">{emp.shiftsCount}</td>
-                      <td className="p-3 text-right text-gray-600">
-                        {emp.revenue.toFixed(0)} грн
-                      </td>
-                      <td className="p-3 text-right font-semibold text-green-600">
-                        {emp.totalSalary.toFixed(2)} грн
-                      </td>
+            {results.employees && results.employees.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-100 border-b">
+                      <th className="p-3 text-left">Співробітник</th>
+                      <th className="p-3 text-center">Зміни</th>
+                      <th className="p-3 text-right">Виручка</th>
+                      <th className="p-3 text-right">ЗП</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {results.employees.map((emp, index) => (
+                      <tr key={index} className="border-b hover:bg-gray-50">
+                        <td className="p-3 font-medium">{emp.employeeName}</td>
+                        <td className="p-3 text-center">{emp.shiftsCount}</td>
+                        <td className="p-3 text-right text-gray-600">
+                          {emp.revenue.toFixed(0)} грн
+                        </td>
+                        <td className="p-3 text-right font-semibold text-green-600">
+                          {emp.totalSalary.toFixed(2)} грн
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                Немає даних про співробітників
+              </div>
+            )}
           </div>
         )}
       </div>
