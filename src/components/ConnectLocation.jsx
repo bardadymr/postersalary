@@ -1,4 +1,4 @@
-// frontend/src/components/ConnectLocation.jsx
+// frontend/src/components/ConnectLocation.jsx - ВЕРСИЯ С URL ПАРАМЕТРАМИ
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -10,185 +10,61 @@ const ConnectLocation = ({ onLocationConnected }) => {
 
   const API_URL = import.meta.env.VITE_API_URL || 'https://proper-donkey-nice.ngrok-free.app/api';
 
-  // Слушаем изменения в localStorage
+  // Проверяем URL параметры при загрузке компонента
   useEffect(() => {
-    const handleStorageChange = (e) => {
-      console.log('Storage event:', e);
+    const urlParams = new URLSearchParams(window.location.search);
+    const posterCode = urlParams.get('poster_code');
+    const posterAccount = urlParams.get('poster_account');
+    const posterError = urlParams.get('poster_error');
+
+    console.log('URL params:', { posterCode, posterAccount, posterError });
+
+    if (posterError) {
+      // Обработка ошибки
+      setError(decodeURIComponent(posterError));
+      setLoading(false);
+      setStep('initial');
       
-      if (e.key === 'poster_auth_result' && e.newValue) {
-        try {
-          const data = JSON.parse(e.newValue);
-          console.log('Auth result from storage:', data);
-          
-          // Очищаем данные из localStorage сразу
-          localStorage.removeItem('poster_auth_result');
-          
-          if (data.type === 'POSTER_AUTH_SUCCESS') {
-            handleAuthSuccess(data);
-          } else if (data.type === 'POSTER_AUTH_ERROR') {
-            handleAuthError(data.error);
-          }
-        } catch (err) {
-          console.error('Error parsing storage data:', err);
-        }
-      }
-    };
-
-    // Также проверяем localStorage при монтировании компонента
-    const checkLocalStorage = () => {
-      const stored = localStorage.getItem('poster_auth_result');
-      if (stored) {
-        try {
-          const data = JSON.parse(stored);
-          console.log('Found auth result in storage:', data);
-          
-          // Проверяем, что данные свежие (не старше 5 минут)
-          const age = Date.now() - data.timestamp;
-          if (age < 5 * 60 * 1000) {
-            localStorage.removeItem('poster_auth_result');
-            
-            if (data.type === 'POSTER_AUTH_SUCCESS') {
-              handleAuthSuccess(data);
-            } else if (data.type === 'POSTER_AUTH_ERROR') {
-              handleAuthError(data.error);
-            }
-          } else {
-            // Удаляем старые данные
-            localStorage.removeItem('poster_auth_result');
-          }
-        } catch (err) {
-          console.error('Error parsing stored data:', err);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Проверяем каждые 500ms если мы в режиме connecting
-    let interval;
-    if (step === 'connecting') {
-      interval = setInterval(checkLocalStorage, 500);
+      // Очищаем URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (posterCode && posterAccount) {
+      // Обработка успеха
+      console.log('Found auth data in URL');
+      setStep('connecting');
+      setLoading(true);
+      
+      // Очищаем URL сразу
+      window.history.replaceState({}, '', window.location.pathname);
+      
+      // Сохраняем данные
+      saveLocationData({
+        code: posterCode,
+        account: posterAccount,
+        name: posterAccount
+      });
     }
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      if (interval) clearInterval(interval);
-    };
-  }, [step]);
-
-  const handleAuthSuccess = async (data) => {
-    console.log('Handling auth success:', data);
-    await saveLocationData(data);
-  };
-
-  const handleAuthError = (errorMsg) => {
-    console.log('Handling auth error:', errorMsg);
-    setError(errorMsg || 'Помилка авторизації');
-    setLoading(false);
-    setStep('initial');
-  };
+  }, []);
 
   const handleConnectPoster = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Очищаем старые данные из localStorage
-      localStorage.removeItem('poster_auth_result');
-
-      // 1. Отримуємо URL для авторизації в Poster
+      console.log('Fetching auth URL...');
       const response = await axios.get(`${API_URL}/auth/poster`, {
         headers: {
           'ngrok-skip-browser-warning': 'true'
         }
       });
       
+      console.log('Auth URL response:', response.data);
+      
       if (response.data.success && response.data.authUrl) {
         setStep('connecting');
-        
-        // 2. Встановлюємо обробник postMessage як запасной вариант
-        let authWindow = null;
-        
-        const messageHandler = async (event) => {
-          console.log("Received postMessage:", event.data);
-          
-          // Фильтруем лишние сообщения
-          if (!event.data || typeof event.data !== 'object') {
-            return;
-          }
-          
-          // Игнорируем сообщения от расширений браузера
-          if (event.data.target === 'metamask-inpage' || 
-              event.data.target === 'metamask-contentscript' ||
-              typeof event.data === 'string') {
-            return;
-          }
+        console.log('Redirecting to Poster auth...');
 
-          if (event.data.type === 'POSTER_AUTH_SUCCESS') {
-            console.log("Auth success via postMessage");
-            window.removeEventListener('message', messageHandler);
-            
-            if (authWindow && !authWindow.closed) {
-              authWindow.close();
-            }
-
-            await saveLocationData(event.data);
-            
-          } else if (event.data.type === 'POSTER_AUTH_ERROR') {
-            console.log("Auth error via postMessage");
-            window.removeEventListener('message', messageHandler);
-            
-            if (authWindow && !authWindow.closed) {
-              authWindow.close();
-            }
-            
-            setError(event.data.error || 'Помилка авторизації');
-            setLoading(false);
-            setStep('initial');
-          }
-        };
-
-        window.addEventListener('message', messageHandler);
-        console.log("Message handler added");
-
-        // 3. Відкриваємо Poster авторизацію в новому вікні
-        authWindow = window.open(
-          response.data.authUrl,
-          'PosterAuth',
-          'width=600,height=700,location=no,menubar=no'
-        );
-
-        if (!authWindow) {
-          window.removeEventListener('message', messageHandler);
-          throw new Error('Не вдалось відкрити вікно авторизації. Перевірте налаштування блокування спливаючих вікон.');
-        }
-
-        console.log("Auth window opened");
-
-        // Перевірка, чи вікно не закрито користувачем
-        const checkClosed = setInterval(() => {
-          if (authWindow.closed) {
-            clearInterval(checkClosed);
-            window.removeEventListener('message', messageHandler);
-            
-            // Даем время на обработку данных из localStorage
-            setTimeout(() => {
-              if (step === 'connecting') {
-                setError('Авторизація скасована');
-                setLoading(false);
-                setStep('initial');
-              }
-            }, 1000);
-          }
-        }, 1000);
-
-        // Таймаут на випадок, якщо вікно закрили без авторизації
-        setTimeout(() => {
-          clearInterval(checkClosed);
-          if (authWindow && !authWindow.closed) {
-            window.removeEventListener('message', messageHandler);
-          }
-        }, 300000); // 5 хвилин
+        // Перенаправляем на авторизацию Poster в том же окне
+        window.location.href = response.data.authUrl;
 
       } else {
         throw new Error('Не вдалось отримати URL авторизації');
@@ -285,7 +161,7 @@ const ConnectLocation = ({ onLocationConnected }) => {
           Підключення до Poster...
         </h2>
         <p className="text-gray-600">
-          Будь ласка, завершіть авторизацію у відкритому вікні
+          Зачекайте, обробляємо дані авторизації
         </p>
       </div>
     );
