@@ -68,3 +68,15 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* В кінець файлу */
+input[type="number"],
+input[type="text"],
+select {
+  background-color: white !important;
+  color: #1f2937 !important;
+}
+
+input::placeholder {
+  color: #9ca3af !important;
+}
