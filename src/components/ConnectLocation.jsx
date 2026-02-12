@@ -1,144 +1,91 @@
 // frontend/src/components/ConnectLocation.jsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const ConnectLocation = ({ onLocationConnected }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [step, setStep] = useState('initial'); // initial, connecting, success
-  
-  const broadcastChannelRef = useRef(null);
-  const checkIntervalRef = useRef(null);
 
   const API_URL = import.meta.env.VITE_API_URL || 'https://proper-donkey-nice.ngrok-free.app/api';
 
-  // Cleanup function
+  // Слушаем изменения в localStorage
   useEffect(() => {
-    return () => {
-      if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.close();
-      }
-      if (checkIntervalRef.current) {
-        clearInterval(checkIntervalRef.current);
-      }
-    };
-  }, []);
-
-  // Слушаем все методы коммуникации
-  useEffect(() => {
-    // Метод 1: BroadcastChannel
-    try {
-      const channel = new BroadcastChannel('poster_auth_channel');
-      broadcastChannelRef.current = channel;
-      
-      channel.onmessage = (event) => {
-        console.log('BroadcastChannel message:', event.data);
-        handleAuthData(event.data);
-      };
-      
-      console.log('BroadcastChannel listener added');
-    } catch (e) {
-      console.warn('BroadcastChannel not supported:', e);
-    }
-
-    // Метод 2: localStorage events
     const handleStorageChange = (e) => {
+      console.log('Storage event:', e);
+      
       if (e.key === 'poster_auth_result' && e.newValue) {
-        console.log('Storage event:', e);
         try {
           const data = JSON.parse(e.newValue);
-          handleAuthData(data);
+          console.log('Auth result from storage:', data);
+          
+          // Очищаем данные из localStorage сразу
+          localStorage.removeItem('poster_auth_result');
+          
+          if (data.type === 'POSTER_AUTH_SUCCESS') {
+            handleAuthSuccess(data);
+          } else if (data.type === 'POSTER_AUTH_ERROR') {
+            handleAuthError(data.error);
+          }
         } catch (err) {
           console.error('Error parsing storage data:', err);
         }
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    console.log('Storage listener added');
-
-    // Метод 3: postMessage
-    const messageHandler = (event) => {
-      // Фильтруем лишние сообщения
-      if (!event.data || typeof event.data !== 'object') {
-        console.log('Received postMessage:', event.data);
-        return;
-      }
-      
-      // Игнорируем сообщения от расширений браузера
-      if (event.data.target === 'metamask-inpage' || 
-          event.data.target === 'metamask-contentscript' ||
-          typeof event.data === 'string') {
-        console.log('Received postMessage:', event.data);
-        return;
-      }
-
-      if (event.data.type === 'POSTER_AUTH_SUCCESS' || 
-          event.data.type === 'POSTER_AUTH_ERROR') {
-        console.log('Auth postMessage:', event.data);
-        handleAuthData(event.data);
+    // Также проверяем localStorage при монтировании компонента
+    const checkLocalStorage = () => {
+      const stored = localStorage.getItem('poster_auth_result');
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          console.log('Found auth result in storage:', data);
+          
+          // Проверяем, что данные свежие (не старше 5 минут)
+          const age = Date.now() - data.timestamp;
+          if (age < 5 * 60 * 1000) {
+            localStorage.removeItem('poster_auth_result');
+            
+            if (data.type === 'POSTER_AUTH_SUCCESS') {
+              handleAuthSuccess(data);
+            } else if (data.type === 'POSTER_AUTH_ERROR') {
+              handleAuthError(data.error);
+            }
+          } else {
+            // Удаляем старые данные
+            localStorage.removeItem('poster_auth_result');
+          }
+        } catch (err) {
+          console.error('Error parsing stored data:', err);
+        }
       }
     };
 
-    window.addEventListener('message', messageHandler);
-    console.log('PostMessage listener added');
-
-    // Периодическая проверка localStorage если мы в режиме connecting
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Проверяем каждые 500ms если мы в режиме connecting
+    let interval;
     if (step === 'connecting') {
-      checkIntervalRef.current = setInterval(() => {
-        const stored = localStorage.getItem('poster_auth_result');
-        if (stored) {
-          console.log('Found in localStorage polling');
-          try {
-            const data = JSON.parse(stored);
-            // Проверяем, что данные свежие (не старше 5 минут)
-            const age = Date.now() - data.timestamp;
-            if (age < 5 * 60 * 1000) {
-              handleAuthData(data);
-            } else {
-              localStorage.removeItem('poster_auth_result');
-            }
-          } catch (err) {
-            console.error('Error parsing stored data:', err);
-          }
-        }
-      }, 500);
+      interval = setInterval(checkLocalStorage, 500);
     }
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('message', messageHandler);
-      if (checkIntervalRef.current) {
-        clearInterval(checkIntervalRef.current);
-      }
+      if (interval) clearInterval(interval);
     };
   }, [step]);
 
-  const handleAuthData = (data) => {
-    console.log('handleAuthData called:', data);
-    
-    // Проверяем timestamp чтобы не обрабатывать старые данные
-    if (data.timestamp) {
-      const age = Date.now() - data.timestamp;
-      if (age > 5 * 60 * 1000) { // 5 минут
-        console.log('Data too old, ignoring');
-        return;
-      }
-    }
+  const handleAuthSuccess = async (data) => {
+    console.log('Handling auth success:', data);
+    await saveLocationData(data);
+  };
 
-    // Очищаем localStorage сразу после получения
-    localStorage.removeItem('poster_auth_result');
-
-    if (data.type === 'POSTER_AUTH_SUCCESS') {
-      console.log('Processing auth success');
-      saveLocationData(data);
-    } else if (data.type === 'POSTER_AUTH_ERROR') {
-      console.log('Processing auth error');
-      setError(data.error || 'Помилка авторизації');
-      setLoading(false);
-      setStep('initial');
-    }
+  const handleAuthError = (errorMsg) => {
+    console.log('Handling auth error:', errorMsg);
+    setError(errorMsg || 'Помилка авторизації');
+    setLoading(false);
+    setStep('initial');
   };
 
   const handleConnectPoster = async () => {
@@ -146,45 +93,87 @@ const ConnectLocation = ({ onLocationConnected }) => {
     setError(null);
 
     try {
-      // Очищаем старые данные
+      // Очищаем старые данные из localStorage
       localStorage.removeItem('poster_auth_result');
 
-      console.log('Fetching auth URL...');
+      // 1. Отримуємо URL для авторизації в Poster
       const response = await axios.get(`${API_URL}/auth/poster`, {
         headers: {
           'ngrok-skip-browser-warning': 'true'
         }
       });
       
-      console.log('Auth URL response:', response.data);
-      
       if (response.data.success && response.data.authUrl) {
         setStep('connecting');
-        console.log('Opening auth window...');
+        
+        // 2. Встановлюємо обробник postMessage як запасной вариант
+        let authWindow = null;
+        
+        const messageHandler = async (event) => {
+          console.log("Received postMessage:", event.data);
+          
+          // Фильтруем лишние сообщения
+          if (!event.data || typeof event.data !== 'object') {
+            return;
+          }
+          
+          // Игнорируем сообщения от расширений браузера
+          if (event.data.target === 'metamask-inpage' || 
+              event.data.target === 'metamask-contentscript' ||
+              typeof event.data === 'string') {
+            return;
+          }
 
-        // Відкриваємо Poster авторизацію в новому вікні
-        const authWindow = window.open(
+          if (event.data.type === 'POSTER_AUTH_SUCCESS') {
+            console.log("Auth success via postMessage");
+            window.removeEventListener('message', messageHandler);
+            
+            if (authWindow && !authWindow.closed) {
+              authWindow.close();
+            }
+
+            await saveLocationData(event.data);
+            
+          } else if (event.data.type === 'POSTER_AUTH_ERROR') {
+            console.log("Auth error via postMessage");
+            window.removeEventListener('message', messageHandler);
+            
+            if (authWindow && !authWindow.closed) {
+              authWindow.close();
+            }
+            
+            setError(event.data.error || 'Помилка авторизації');
+            setLoading(false);
+            setStep('initial');
+          }
+        };
+
+        window.addEventListener('message', messageHandler);
+        console.log("Message handler added");
+
+        // 3. Відкриваємо Poster авторизацію в новому вікні
+        authWindow = window.open(
           response.data.authUrl,
           'PosterAuth',
           'width=600,height=700,location=no,menubar=no'
         );
 
         if (!authWindow) {
+          window.removeEventListener('message', messageHandler);
           throw new Error('Не вдалось відкрити вікно авторизації. Перевірте налаштування блокування спливаючих вікон.');
         }
 
-        console.log('Auth window opened');
+        console.log("Auth window opened");
 
         // Перевірка, чи вікно не закрито користувачем
         const checkClosed = setInterval(() => {
           if (authWindow.closed) {
-            console.log('Auth window closed');
             clearInterval(checkClosed);
+            window.removeEventListener('message', messageHandler);
             
-            // Даем время на обработку данных
+            // Даем время на обработку данных из localStorage
             setTimeout(() => {
               if (step === 'connecting') {
-                console.log('Auth cancelled by user');
                 setError('Авторизація скасована');
                 setLoading(false);
                 setStep('initial');
@@ -193,9 +182,12 @@ const ConnectLocation = ({ onLocationConnected }) => {
           }
         }, 1000);
 
-        // Таймаут
+        // Таймаут на випадок, якщо вікно закрили без авторизації
         setTimeout(() => {
           clearInterval(checkClosed);
+          if (authWindow && !authWindow.closed) {
+            window.removeEventListener('message', messageHandler);
+          }
         }, 300000); // 5 хвилин
 
       } else {
