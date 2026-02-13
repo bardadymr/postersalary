@@ -530,7 +530,7 @@ const SalaryCalculator = ({ refreshKey }) => {
                 results.inventory.totalLoss < 0 ? 'bg-red-50' : 'bg-green-50'
               }`}>
                 <div className="font-semibold mb-1" style={textStyles.dark}>
-                  📦 Інвентаризація ({months[results.inventory.month - 1]} {results.inventory.year})
+                  📦 Інвентаризація
                 </div>
                 <div 
                   className={results.inventory.totalLoss < 0 ? 'text-red-600' : 'text-green-600'}
