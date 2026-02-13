@@ -1,63 +1,44 @@
-// frontend/src/App.jsx
-
-import React, { useState } from 'react';
-import SalaryCalculator from './components/SalaryCalculator';
-import ConnectLocation from './components/ConnectLocation';
-
-function App() {
-  const [view, setView] = useState('calculator'); // 'calculator' | 'connect'
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const handleLocationConnected = (location) => {
-    console.log('Location connected:', location);
-    // Оновлюємо список закладів
-    setRefreshKey(prev => prev + 1);
-    // Повертаємось до калькулятора
-    setView('calculator');
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <div className="bg-white shadow-sm mb-4">
-        <div className="max-w-2xl mx-auto px-4 py-3">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setView('calculator')}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                view === 'calculator'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              💰 Розрахунок
-            </button>
-            <button
-              onClick={() => setView('connect')}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                view === 'connect'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              🔗 Підключити
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="px-4">
-        {view === 'calculator' ? (
-          <SalaryCalculator key={refreshKey} />
-        ) : (
-          <div className="max-w-2xl mx-auto">
-            <ConnectLocation onLocationConnected={handleLocationConnected} />
-          </div>
-        )}
-      </div>
-    </div>
-  );
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
-export default App;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #2563ebaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+  background-color: white;
+  color: #1f2937;
+}
+
+.read-the-docs {
+  color: #6b7280;
+}
