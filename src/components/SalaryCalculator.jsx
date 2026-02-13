@@ -14,6 +14,15 @@ const SalaryCalculator = ({ refreshKey }) => {
   const [error, setError] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
   
+  // Inline стили как fallback если Tailwind не работает
+  const textStyles = {
+    dark: { color: '#1f2937' },
+    gray: { color: '#4b5563' },
+    lightGray: { color: '#6b7280' },
+    green: { color: '#059669' },
+    red: { color: '#dc2626' }
+  };
+  
   const [formData, setFormData] = useState({
     locationId: '',
     month: new Date().getMonth() + 1,
@@ -188,21 +197,9 @@ const SalaryCalculator = ({ refreshKey }) => {
 
     try {
       console.log('Sending calculation request to:', `${API_URL}/salary/calculate`);
+      console.log('Request data:', formData);
       
-      // Формируем данные для отправки - убеждаемся что все в правильном формате
-      const requestData = {
-        locationId: formData.locationId,
-        month: parseInt(formData.month), // Убеждаемся что это число
-        year: parseInt(formData.year),   // Убеждаемся что это число
-        inventoryId: formData.inventoryId || undefined, // Отправляем только если выбрана
-        storageId: formData.storageId || undefined,     // Отправляем только если выбрана
-        shiftRate: parseFloat(formData.shiftRate),
-        revenuePercent: parseFloat(formData.revenuePercent)
-      };
-      
-      console.log('Request data (formatted):', requestData);
-      
-      const response = await axios.post(`${API_URL}/salary/calculate`, requestData, {
+      const response = await axios.post(`${API_URL}/salary/calculate`, formData, {
         headers: {
           'ngrok-skip-browser-warning': 'true',
           'Content-Type': 'application/json'
@@ -517,20 +514,20 @@ const SalaryCalculator = ({ refreshKey }) => {
             {/* Summary */}
             <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-blue-50 rounded-lg">
               <div>
-                <div className="text-sm text-gray-600">Період</div>
-                <div className="font-semibold text-gray-900">{results.period.monthName} {results.period.year}</div>
+                <div className="text-sm text-gray-600" style={textStyles.lightGray}>Період</div>
+                <div className="font-semibold" style={textStyles.dark}>{results.period.monthName} {results.period.year}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">Співробітників</div>
-                <div className="font-semibold text-gray-900">{results.summary.employeesCount}</div>
+                <div className="text-sm text-gray-600" style={textStyles.lightGray}>Співробітників</div>
+                <div className="font-semibold" style={textStyles.dark}>{results.summary.employeesCount}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">Загальна виручка</div>
-                <div className="font-semibold text-gray-900">{results.summary.totalRevenue.toFixed(2)} грн</div>
+                <div className="text-sm text-gray-600" style={textStyles.lightGray}>Загальна виручка</div>
+                <div className="font-semibold" style={textStyles.dark}>{results.summary.totalRevenue.toFixed(2)} грн</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">Всього до виплати</div>
-                <div className="font-semibold text-green-600">
+                <div className="text-sm text-gray-600" style={textStyles.lightGray}>Всього до виплати</div>
+                <div className="font-semibold text-green-600" style={textStyles.green}>
                   {results.summary.totalSalary.toFixed(2)} грн
                 </div>
               </div>
@@ -541,10 +538,13 @@ const SalaryCalculator = ({ refreshKey }) => {
               <div className={`p-4 rounded-lg mb-4 ${
                 results.inventory.totalLoss < 0 ? 'bg-red-50' : 'bg-green-50'
               }`}>
-                <div className="font-semibold mb-1 text-gray-900">
+                <div className="font-semibold mb-1" style={textStyles.dark}>
                   📦 Інвентаризація ({months[results.inventory.month - 1]} {results.inventory.year})
                 </div>
-                <div className={results.inventory.totalLoss < 0 ? 'text-red-600' : 'text-green-600'}>
+                <div 
+                  className={results.inventory.totalLoss < 0 ? 'text-red-600' : 'text-green-600'}
+                  style={results.inventory.totalLoss < 0 ? textStyles.red : textStyles.green}
+                >
                   {results.inventory.totalLoss >= 0 ? '+' : ''}
                   {results.inventory.totalLoss.toFixed(2)} грн
                 </div>
@@ -557,21 +557,21 @@ const SalaryCalculator = ({ refreshKey }) => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-100 border-b">
-                      <th className="p-3 text-left text-gray-900">Співробітник</th>
-                      <th className="p-3 text-center text-gray-900">Зміни</th>
-                      <th className="p-3 text-right text-gray-900">Виручка</th>
-                      <th className="p-3 text-right text-gray-900">ЗП</th>
+                      <th className="p-3 text-left" style={textStyles.dark}>Співробітник</th>
+                      <th className="p-3 text-center" style={textStyles.dark}>Зміни</th>
+                      <th className="p-3 text-right" style={textStyles.dark}>Виручка</th>
+                      <th className="p-3 text-right" style={textStyles.dark}>ЗП</th>
                     </tr>
                   </thead>
                   <tbody>
                     {results.employees.map((emp, index) => (
                       <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="p-3 font-medium text-gray-900">{emp.employeeName}</td>
-                        <td className="p-3 text-center text-gray-900">{emp.shiftsCount}</td>
-                        <td className="p-3 text-right text-gray-600">
+                        <td className="p-3 font-medium" style={textStyles.dark}>{emp.employeeName}</td>
+                        <td className="p-3 text-center" style={textStyles.dark}>{emp.shiftsCount}</td>
+                        <td className="p-3 text-right text-gray-600" style={textStyles.gray}>
                           {emp.revenue.toFixed(0)} грн
                         </td>
-                        <td className="p-3 text-right font-semibold text-green-600">
+                        <td className="p-3 text-right font-semibold text-green-600" style={textStyles.green}>
                           {emp.totalSalary.toFixed(2)} грн
                         </td>
                       </tr>
@@ -580,7 +580,7 @@ const SalaryCalculator = ({ refreshKey }) => {
                 </table>
               </div>
             ) : (
-              <div className="text-center text-gray-500 py-8">
+              <div className="text-center text-gray-500 py-8" style={textStyles.gray}>
                 Немає даних про співробітників
               </div>
             )}
