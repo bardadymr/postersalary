@@ -197,9 +197,21 @@ const SalaryCalculator = ({ refreshKey }) => {
 
     try {
       console.log('Sending calculation request to:', `${API_URL}/salary/calculate`);
-      console.log('Request data:', formData);
       
-      const response = await axios.post(`${API_URL}/salary/calculate`, formData, {
+      // Формируем данные для отправки - убеждаемся что все в правильном формате
+      const requestData = {
+        locationId: formData.locationId,
+        month: parseInt(formData.month), // Убеждаемся что это число
+        year: parseInt(formData.year),   // Убеждаемся что это число
+        inventoryId: formData.inventoryId || undefined, // Отправляем только если выбрана
+        storageId: formData.storageId || undefined,     // Отправляем только если выбрана
+        shiftRate: parseFloat(formData.shiftRate),       // Преобразуем в число
+        revenuePercent: parseFloat(formData.revenuePercent) // Преобразуем в число
+      };
+      
+      console.log('Request data (formatted):', requestData);
+      
+      const response = await axios.post(`${API_URL}/salary/calculate`, requestData, {
         headers: {
           'ngrok-skip-browser-warning': 'true',
           'Content-Type': 'application/json'
