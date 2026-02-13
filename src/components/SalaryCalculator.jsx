@@ -246,10 +246,6 @@ const SalaryCalculator = ({ refreshKey }) => {
     }
   };
 
-  const exportToCSV = async () => {
-    showNotification('Експорт буде доступний найближчим часом');
-  };
-
   const formatInventoryDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('uk-UA', { 
@@ -484,32 +480,15 @@ const SalaryCalculator = ({ refreshKey }) => {
                 '🧮 Розрахувати зарплату'
               )}
             </button>
-
-            {/* Reload locations button */}
-            <button
-              onClick={fetchLocations}
-              disabled={loadingLocations}
-              className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 disabled:text-gray-400"
-            >
-              {loadingLocations ? '⏳ Завантаження...' : '🔄 Оновити список закладів'}
-            </button>
           </div>
         </div>
 
         {/* Results */}
         {results && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                📋 Результати розрахунку
-              </h2>
-              <button
-                onClick={exportToCSV}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-              >
-                📥 Експорт CSV
-              </button>
-            </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              📋 Результати розрахунку
+            </h2>
 
             {/* Summary */}
             <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-blue-50 rounded-lg">
