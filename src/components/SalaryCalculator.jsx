@@ -1,21 +1,25 @@
 // frontend/src/components/SalaryCalculator.jsx
+// ОБНОВЛЕННАЯ ВЕРСИЯ с выбором инвентаризации
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const SalaryCalculator = ({ refreshKey }) => {
   const [locations, setLocations] = useState([]);
+  const [inventories, setInventories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingLocations, setLoadingLocations] = useState(true);
+  const [loadingInventories, setLoadingInventories] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
   
   const [formData, setFormData] = useState({
     locationId: '',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
-    inventoryMonth: new Date().getMonth() + 1,
-    inventoryYear: new Date().getFullYear(),
+    inventoryId: '',      // Новое поле
+    storageId: '',        // Новое поле
     shiftRate: 500,
     revenuePercent: 3
   });
@@ -31,7 +35,6 @@ const SalaryCalculator = ({ refreshKey }) => {
       tg.ready();
       tg.expand();
       
-      // Налаштування теми
       tg.setHeaderColor('bg_color');
       tg.setBackgroundColor('bg_color');
     }
@@ -40,7 +43,7 @@ const SalaryCalculator = ({ refreshKey }) => {
   // Завантаження списку закладів
   useEffect(() => {
     fetchLocations();
-  }, [refreshKey]); // Оновлюємо при зміні refreshKey
+  }, [refreshKey]);
 
   const fetchLocations = async () => {
     setLoadingLocations(true);
@@ -71,6 +74,87 @@ const SalaryCalculator = ({ refreshKey }) => {
     } finally {
       setLoadingLocations(false);
     }
+  };
+
+  // Загрузка инвентаризаций при выборе заведения
+  const fetchInventories = async (locationId) => {
+    if (!locationId) return;
+    
+    setLoadingInventories(true);
+    setError(null);
+    
+    try {
+      console.log('Fetching inventories for location:', locationId);
+      
+      const response = await axios.get(`${API_URL}/locations/${locationId}/inventories`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        },
+        params: {
+          limit: 10 // Получаем последние 10 инвентаризаций
+        }
+      });
+      
+      console.log('Inventories response:', response.data);
+      
+      if (response.data && response.data.inventories) {
+        setInventories(response.data.inventories);
+        console.log('Loaded inventories:', response.data.inventories);
+      } else {
+        setInventories([]);
+        console.warn('No inventories in response');
+      }
+    } catch (error) {
+      console.error('Error fetching inventories:', error);
+      showNotification('Помилка завантаження інвентаризацій: ' + (error.response?.data?.error || error.message), 'error');
+      setInventories([]);
+    } finally {
+      setLoadingInventories(false);
+    }
+  };
+
+  const handleLocationChange = (e) => {
+    const locationId = e.target.value;
+    console.log('Location changed:', locationId);
+    
+    setFormData(prev => ({
+      ...prev,
+      locationId: locationId,
+      inventoryId: '', // Сбрасываем выбранную инвентаризацию
+      storageId: ''
+    }));
+    
+    setSelectedLocation(locations.find(l => l.id === locationId));
+    
+    // Загружаем инвентаризации для выбранного заведения
+    if (locationId) {
+      fetchInventories(locationId);
+    } else {
+      setInventories([]);
+    }
+  };
+
+  const handleInventoryChange = (e) => {
+    const selectedValue = e.target.value;
+    console.log('Inventory selected:', selectedValue);
+    
+    if (!selectedValue) {
+      setFormData(prev => ({
+        ...prev,
+        inventoryId: '',
+        storageId: ''
+      }));
+      return;
+    }
+    
+    // Формат: "inventoryId:storageId"
+    const [inventoryId, storageId] = selectedValue.split(':');
+    
+    setFormData(prev => ({
+      ...prev,
+      inventoryId: inventoryId,
+      storageId: storageId
+    }));
   };
 
   const handleInputChange = (e) => {
@@ -119,7 +203,6 @@ const SalaryCalculator = ({ refreshKey }) => {
         setResults(response.data);
         showNotification('Розрахунок виконано успішно', 'success');
         
-        // Вібрація при успіху
         if (window.Telegram?.WebApp) {
           window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
         }
@@ -158,6 +241,15 @@ const SalaryCalculator = ({ refreshKey }) => {
     showNotification('Експорт буде доступний найближчим часом');
   };
 
+  const formatInventoryDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('uk-UA', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    });
+  };
+
   const months = [
     'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
     'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
@@ -178,7 +270,6 @@ const SalaryCalculator = ({ refreshKey }) => {
             Автоматичний розрахунок на основі даних Poster
           </p>
           
-          {/* Debug info */}
           <div className="mt-2 text-xs text-gray-400">
             Закладів: {locations.length} | API: {API_URL.split('/').pop()}
           </div>
@@ -223,18 +314,57 @@ const SalaryCalculator = ({ refreshKey }) => {
                 <select
                   name="locationId"
                   value={formData.locationId}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  onChange={handleLocationChange}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 >
-                  <option value="">Оберіть заклад...</option>
-                  {locations.map(loc => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.name}
+                  <option value="">Оберіть заклад</option>
+                  {locations.map(location => (
+                    <option key={location.id} value={location.id}>
+                      {location.name} ({location.poster_account})
                     </option>
                   ))}
                 </select>
               )}
             </div>
+
+            {/* Вибір інвентаризації */}
+            {formData.locationId && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  📦 Інвентаризація (опціонально)
+                </label>
+                {loadingInventories ? (
+                  <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                    Завантаження інвентаризацій...
+                  </div>
+                ) : inventories.length === 0 ? (
+                  <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 text-sm">
+                    📭 Інвентаризації не знайдено. Розрахунок буде без вирахувань.
+                  </div>
+                ) : (
+                  <select
+                    name="inventory"
+                    value={formData.inventoryId && formData.storageId ? `${formData.inventoryId}:${formData.storageId}` : ''}
+                    onChange={handleInventoryChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="">Без інвентаризації</option>
+                    {inventories.map(inv => (
+                      <option 
+                        key={`${inv.inventoryId}-${inv.storageId}`} 
+                        value={`${inv.inventoryId}:${inv.storageId}`}
+                      >
+                        {inv.storageName} - {formatInventoryDate(inv.dateEnd)} 
+                        {inv.lossAmount < 0 ? ` (нестача ${Math.abs(inv.lossAmount).toFixed(2)} грн)` : ` (надлишок ${inv.lossAmount.toFixed(2)} грн)`}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 Якщо не обрано - розрахунок буде без вирахувань за інвентаризацію
+                </p>
+              </div>
+            )}
 
             {/* Період розрахунку */}
             <div className="grid grid-cols-2 gap-4">
@@ -262,44 +392,6 @@ const SalaryCalculator = ({ refreshKey }) => {
                 <select
                   name="year"
                   value={formData.year}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  {years.map(year => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Місяць інвентаризації */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  📦 Інвентаризація (місяць)
-                </label>
-                <select
-                  name="inventoryMonth"
-                  value={formData.inventoryMonth}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  {months.map((month, index) => (
-                    <option key={index + 1} value={index + 1}>
-                      {month}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  📆 Рік
-                </label>
-                <select
-                  name="inventoryYear"
-                  value={formData.inventoryYear}
                   onChange={handleInputChange}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 >
