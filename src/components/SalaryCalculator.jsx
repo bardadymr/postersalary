@@ -30,7 +30,7 @@ const SalaryCalculator = ({ refreshKey }) => {
     inventoryId: '',      // Новое поле
     storageId: '',        // Новое поле
     shiftRate: 500,
-    revenuePercent: 3
+    revenuePercent: 2
   });
 
   const API_URL = import.meta.env.VITE_API_URL || 'https://proper-donkey-nice.ngrok-free.app/api';
