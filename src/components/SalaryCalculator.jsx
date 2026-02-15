@@ -283,33 +283,7 @@ const SalaryCalculator = ({ refreshKey }) => {
           <h1 className="text-2xl font-bold text-gray-800 mb-2">
             💰 Розрахунок зарплати
           </h1>
-          <p className="text-gray-600 text-sm">
-            Автоматичний розрахунок на основі даних Poster
-          </p>
-          
-          <div className="mt-2 text-xs text-gray-400">
-            Закладів: {locations.length} | API: {API_URL.split('/').pop()}
-          </div>
         </div>
-
-        {/* Error display */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <div className="flex items-start">
-              <span className="text-red-600 text-lg mr-2">⚠️</span>
-              <div className="flex-1">
-                <p className="text-red-800 font-medium">Помилка</p>
-                <p className="text-red-600 text-sm mt-1">{error}</p>
-              </div>
-              <button
-                onClick={() => setError(null)}
-                className="text-red-400 hover:text-red-600"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Form */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-4">
@@ -452,7 +426,7 @@ const SalaryCalculator = ({ refreshKey }) => {
                 max="100"
                 step="0.5"
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                placeholder="3"
+                placeholder="2"
               />
             </div>
 
