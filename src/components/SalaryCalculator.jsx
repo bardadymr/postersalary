@@ -279,14 +279,14 @@ const SalaryCalculator = ({ refreshKey }) => {
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-800 mb-2">
             💰 Розрахунок зарплати
           </h1>
         </div>
 
         {/* Form */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-4">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4">
           <div className="space-y-4">
             {/* Вибір закладу */}
             <div>
@@ -471,28 +471,28 @@ const SalaryCalculator = ({ refreshKey }) => {
 
         {/* Results */}
         {results && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4">
+            <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4">
               📋 Результати розрахунку
             </h2>
 
             {/* Summary */}
-            <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-blue-50 rounded-lg">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
               <div>
-                <div className="text-sm text-gray-600" style={textStyles.lightGray}>Період</div>
-                <div className="font-semibold" style={textStyles.dark}>{results.period.monthName} {results.period.year}</div>
+                <div className="text-xs sm:text-sm text-gray-600" style={textStyles.lightGray}>Період</div>
+                <div className="font-semibold text-sm sm:text-base" style={textStyles.dark}>{results.period.monthName} {results.period.year}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600" style={textStyles.lightGray}>Співробітників</div>
-                <div className="font-semibold" style={textStyles.dark}>{results.summary.employeesCount}</div>
+                <div className="text-xs sm:text-sm text-gray-600" style={textStyles.lightGray}>Співробітників</div>
+                <div className="font-semibold text-sm sm:text-base" style={textStyles.dark}>{results.summary.employeesCount}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600" style={textStyles.lightGray}>Загальна виручка</div>
-                <div className="font-semibold" style={textStyles.dark}>{results.summary.totalRevenue.toFixed(2)} грн</div>
+                <div className="text-xs sm:text-sm text-gray-600" style={textStyles.lightGray}>Загальна виручка</div>
+                <div className="font-semibold text-sm sm:text-base" style={textStyles.dark}>{results.summary.totalRevenue.toFixed(2)} грн</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600" style={textStyles.lightGray}>Всього до виплати</div>
-                <div className="font-semibold text-green-600" style={textStyles.green}>
+                <div className="text-xs sm:text-sm text-gray-600" style={textStyles.lightGray}>Всього до виплати</div>
+                <div className="font-semibold text-sm sm:text-base text-green-600" style={textStyles.green}>
                   {results.summary.totalSalary.toFixed(2)} грн
                 </div>
               </div>
@@ -518,26 +518,28 @@ const SalaryCalculator = ({ refreshKey }) => {
 
             {/* Employees Table */}
             {results.employees && results.employees.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <table className="w-full text-xs sm:text-sm">
                   <thead>
                     <tr className="bg-gray-100 border-b">
-                      <th className="p-3 text-left" style={textStyles.dark}>Співробітник</th>
-                      <th className="p-3 text-center" style={textStyles.dark}>Зміни</th>
-                      <th className="p-3 text-right" style={textStyles.dark}>Виручка</th>
-                      <th className="p-3 text-right" style={textStyles.dark}>ЗП</th>
+                      <th className="p-2 sm:p-3 text-left text-xs sm:text-sm" style={textStyles.dark}>Ім'я</th>
+                      <th className="p-2 sm:p-3 text-center text-xs sm:text-sm" style={textStyles.dark}>Зміни</th>
+                      <th className="p-2 sm:p-3 text-right text-xs sm:text-sm" style={textStyles.dark}>Виручка</th>
+                      <th className="p-2 sm:p-3 text-right text-xs sm:text-sm" style={textStyles.dark}>ЗП</th>
                     </tr>
                   </thead>
                   <tbody>
                     {results.employees.map((emp, index) => (
                       <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="p-3 font-medium" style={textStyles.dark}>{emp.employeeName}</td>
-                        <td className="p-3 text-center" style={textStyles.dark}>{emp.shiftsCount}</td>
-                        <td className="p-3 text-right text-gray-600" style={textStyles.gray}>
-                          {emp.revenue.toFixed(0)} грн
+                        <td className="p-2 sm:p-3 font-medium text-xs sm:text-sm" style={textStyles.dark}>
+                          <div className="truncate max-w-[100px] sm:max-w-none">{emp.employeeName}</div>
                         </td>
-                        <td className="p-3 text-right font-semibold text-green-600" style={textStyles.green}>
-                          {emp.totalSalary.toFixed(2)} грн
+                        <td className="p-2 sm:p-3 text-center text-xs sm:text-sm" style={textStyles.dark}>{emp.shiftsCount}</td>
+                        <td className="p-2 sm:p-3 text-right text-xs sm:text-sm whitespace-nowrap" style={textStyles.gray}>
+                          {emp.revenue.toFixed(0)}
+                        </td>
+                        <td className="p-2 sm:p-3 text-right font-semibold text-xs sm:text-sm whitespace-nowrap" style={textStyles.green}>
+                          {emp.totalSalary.toFixed(2)}
                         </td>
                       </tr>
                     ))}
