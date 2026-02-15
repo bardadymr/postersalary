@@ -280,7 +280,7 @@ const SalaryCalculator = ({ refreshKey }) => {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4">
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-800 mb-2">
+          <h1 className="text-base sm:text-2xl font-bold text-gray-800 mb-2">
             💰 Розрахунок зарплати
           </h1>
         </div>
@@ -472,7 +472,7 @@ const SalaryCalculator = ({ refreshKey }) => {
         {/* Results */}
         {results && (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4">
-            <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4">
+            <h2 className="text-sm sm:text-xl font-bold text-gray-800 mb-4">
               📋 Результати розрахунку
             </h2>
 
@@ -519,26 +519,26 @@ const SalaryCalculator = ({ refreshKey }) => {
             {/* Employees Table */}
             {results.employees && results.employees.length > 0 ? (
               <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <table className="w-full text-xs sm:text-sm">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-100 border-b">
-                      <th className="p-2 sm:p-3 text-left text-xs sm:text-sm" style={textStyles.dark}>Ім'я</th>
-                      <th className="p-2 sm:p-3 text-center text-xs sm:text-sm" style={textStyles.dark}>Зміни</th>
-                      <th className="p-2 sm:p-3 text-right text-xs sm:text-sm" style={textStyles.dark}>Виручка</th>
-                      <th className="p-2 sm:p-3 text-right text-xs sm:text-sm" style={textStyles.dark}>ЗП</th>
+                      <th className="py-2 px-1 sm:p-3 text-left text-sm" style={textStyles.dark}>Ім'я</th>
+                      <th className="py-2 px-1 sm:p-3 text-center text-sm" style={textStyles.dark}>Зміни</th>
+                      <th className="py-2 px-1 sm:p-3 text-right text-sm" style={textStyles.dark}>Виручка</th>
+                      <th className="py-2 px-1 sm:p-3 text-right text-sm" style={textStyles.dark}>ЗП</th>
                     </tr>
                   </thead>
                   <tbody>
                     {results.employees.map((emp, index) => (
                       <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="p-2 sm:p-3 font-medium text-xs sm:text-sm" style={textStyles.dark}>
-                          <div className="truncate max-w-[100px] sm:max-w-none">{emp.employeeName}</div>
+                        <td className="py-2 px-1 sm:p-3 font-medium text-sm" style={textStyles.dark}>
+                          <div className="truncate max-w-[90px] sm:max-w-none">{emp.employeeName}</div>
                         </td>
-                        <td className="p-2 sm:p-3 text-center text-xs sm:text-sm" style={textStyles.dark}>{emp.shiftsCount}</td>
-                        <td className="p-2 sm:p-3 text-right text-xs sm:text-sm whitespace-nowrap" style={textStyles.gray}>
+                        <td className="py-2 px-1 sm:p-3 text-center text-sm" style={textStyles.dark}>{emp.shiftsCount}</td>
+                        <td className="py-2 px-1 sm:p-3 text-right text-sm whitespace-nowrap" style={textStyles.gray}>
                           {emp.revenue.toFixed(0)}
                         </td>
-                        <td className="p-2 sm:p-3 text-right font-semibold text-xs sm:text-sm whitespace-nowrap" style={textStyles.green}>
+                        <td className="py-2 px-1 sm:p-3 text-right font-semibold text-sm whitespace-nowrap" style={textStyles.green}>
                           {emp.totalSalary.toFixed(2)}
                         </td>
                       </tr>
