@@ -280,7 +280,7 @@ const SalaryCalculator = ({ refreshKey }) => {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4">
-          <h1 className="text-sm sm:text-2xl font-bold text-gray-800 mb-2">
+          <h1 className="!text-base !sm:text-2xl font-bold text-gray-800 mb-2">
             💰 Розрахунок зарплати
           </h1>
         </div>
