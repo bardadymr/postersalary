@@ -201,7 +201,7 @@ const ConnectLocation = ({ onLocationConnected }) => {
           className={`w-full py-4 rounded-lg font-semibold text-white transition-all ${
             loading
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+              : 'bg-zinc-600 hover:bg-zinc-700 active:scale-95'
           }`}
         >
           {loading ? (
