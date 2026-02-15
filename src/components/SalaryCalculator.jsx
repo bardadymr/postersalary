@@ -437,7 +437,7 @@ const SalaryCalculator = ({ refreshKey }) => {
               className={`w-full py-4 rounded-lg font-semibold text-white transition-all ${
                 loading || locations.length === 0
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+                  : 'bg-gray-700 hover:bg-gray-900 active:scale-95'
               }`}
             >
               {loading ? (
