@@ -26,7 +26,7 @@ function App() {
               onClick={() => setView('calculator')}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
                 view === 'calculator'
-                  ? 'bg-gray-800 text-white'
+                  ? 'bg-emerald-800 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -36,7 +36,7 @@ function App() {
               onClick={() => setView('connect')}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
                 view === 'connect'
-                  ? 'bg-gray-800 text-white'
+                  ? 'bg-sky-800 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
